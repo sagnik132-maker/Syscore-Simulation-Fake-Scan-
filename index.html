@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYSCORE — Visual Simulation</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:monospace;overflow:hidden;background:#f4f5f7}
+
+.screen{
+display:none;
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+padding:24px;
+overflow:hidden;
+opacity:1;
+}
+.screen.active{display:flex}
+
+/* Hard cuts: no screen transition animation */
+.screen.fade-in,
+.screen.glitch-in{animation:none !important}
+
+.center{
+width:100%;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+text-align:center
+}
+button{
+padding:13px 24px;
+border:0;
+border-radius:5px;
+background:#1769d2;
+color:white;
+font-weight:bold;
+cursor:pointer
+}
+.card{
+background:white;
+color:#222;
+padding:28px;
+border-radius:12px;
+max-width:440px;
+width:100%;
+box-shadow:0 8px 30px #0002
+}
+.bar{height:9px;background:#8885;margin-top:18px;width:100%}
+.fill{height:100%;width:0;background:#35bb76}
+h1{font-size:clamp(25px,6vw,60px)}
+h2{font-size:clamp(18px,3.8vw,34px)}
+p,pre{overflow-wrap:anywhere;white-space:pre-wrap}
+.big{
+font-size:clamp(22px,5vw,52px);
+font-weight:bold;
+overflow-wrap:anywhere
+}
+.red{background:#390000;color:#ff3838}
+.blue{background:#00132e;color:#42caff}
+.purple{background:#260033;color:#ff53ff}
+.yellow{background:#292300;color:#fff04b}
+.green{background:#002b19;color:#6dff9f}
+.black{background:#000;color:#f3f3f3}
+.orange{background:#321300;color:#ff9b40}
+.white{background:#e7edf4;color:#18283d}
+.cyan{background:#002d30;color:#4cfff3}
+.pink{background:#350019;color:#ff80bb}
+.gray{background:#252a32;color:#e4e9f0}
+.lime{background:#172800;color:#d4ff3e}
+.magenta{background:#310020;color:#ff55a9}
+.navy{background:#050b28;color:#a8baff}
+.rainbow{
+background:linear-gradient(125deg,#180027,#00303b,#3b0018);
+color:#fff
+}
+.flicker{animation:flicker .18s infinite alternate}
+.shake{animation:shake .13s infinite}
+.spin{animation:spin 2s linear infinite}
+.noise{
+position:absolute;
+inset:0;
+pointer-events:none;
+background:repeating-linear-gradient(
+0deg,transparent 0 3px,#ffffff20 4px
+)
+}
+.blocks{
+display:grid;
+grid-template-columns:repeat(10,1fr);
+gap:4px;
+width:100%;
+margin-top:18px
+}
+.blocks i{
+height:clamp(8px,2.3vh,20px);
+background:currentColor;
+opacity:.7
+}
+.split{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+width:100%
+}
+.panel{
+border:2px dashed currentColor;
+padding:8px;
+min-width:0;
+overflow:hidden
+}
+#status{
+position:fixed;
+top:9px;
+right:12px;
+z-index:100;
+font-size:12px;
+color:#777;
+background:#00000010;
+padding:5px
+}
+
+@keyframes flicker{from{opacity:.4}to{opacity:1}}
+@keyframes shake{
+0%{transform:translate(0)}
+25%{transform:translate(2px,-1px)}
+50%{transform:translate(-2px,2px)}
+75%{transform:translate(1px,2px)}
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Persistent glitch emphasis: existing elements only */
+
+/* Glitch A: red and cyan text separation */
+.screen.glitch-a h1,
+.screen.glitch-a h2,
+.screen.glitch-a p,
+.screen.glitch-a pre,
+.screen.glitch-a .big{
+text-shadow:2px 0 #ff3344,-2px 0 #00eaff;
+filter:brightness(1.5) contrast(1.3);
+}
+.screen.glitch-a .blocks i{
+filter:brightness(2);
+}
+.screen.glitch-a .panel{
+filter:brightness(1.3);
+}
+
+/* Glitch B: bright white text distortion */
+.screen.glitch-b h1,
+.screen.glitch-b h2,
+.screen.glitch-b p,
+.screen.glitch-b pre,
+.screen.glitch-b .big{
+text-shadow:2px 1px #ffffff,-2px -1px #ff0033;
+filter:brightness(1.7);
+}
+.screen.glitch-b .blocks i{
+filter:brightness(2.3) contrast(1.5);
+}
+.screen.glitch-b .panel{
+filter:brightness(1.5);
+}
+
+/* Glitch C: blue and purple text emphasis */
+.screen.glitch-c h1,
+.screen.glitch-c h2,
+.screen.glitch-c p,
+.screen.glitch-c pre,
+.screen.glitch-c .big{
+text-shadow:2px 0 #00eaff,-2px 1px #c000ff;
+filter:brightness(1.6) contrast(1.4);
+}
+.screen.glitch-c .blocks i{
+filter:brightness(2.5);
+}
+.screen.glitch-c .panel{
+filter:brightness(1.4) contrast(1.3);
+}
+
+/* Existing buttons are also emphasised */
+.screen.glitch-a button,
+.screen.glitch-b button,
+.screen.glitch-c button{
+filter:brightness(1.4) contrast(1.2);
+}
+</style>
+</head>
+
+<body>
+
+<div id="status">SCREEN 1 / 30</div>
+
+<!-- 1. Normal welcome -->
+<section class="screen active" id="s1" style="background:#f4f5f7">
+ <div class="center">
+  <div class="card">
+   <h1>SYSCORE</h1>
+   <p>System Utility Centre</p>
+   <p>Your device is ready.</p>
+   <button onclick="startShow()">Download</button>
+  </div>
+ </div>
+</section>
+
+<!-- 2. Normal update -->
+<section class="screen" id="s2" style="background:#edf4ff;color:#20334e">
+ <div class="center">
+  <div class="card">
+   <h2>System Update</h2>
+   <p>Checking available update...</p>
+   <div class="bar"><div class="fill" id="p2"></div></div>
+   <p id="updateText">Preparing update</p>
+  </div>
+ </div>
+</section>
+
+<!-- 3. Normal check -->
+<section class="screen" id="s3" style="background:#eaf8ef;color:#17452b">
+ <div class="center">
+  <div class="card">
+   <h1>CHECK COMPLETE</h1>
+   <p>All simulated checks passed.</p>
+   <p>Preparing display environment...</p>
+   <div class="bar"><div class="fill" id="p3"></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 4. Red alert -->
+<section class="screen red" id="s4">
+ <div class="noise"></div>
+ <div class="center">
+  <h1 class="flicker">! DISPLAY PROBLEM !</h1>
+  <div class="big">0X00 / 0XFF / 0X00</div>
+  <p id="t4"></p>
+  <div class="blocks" id="b4"></div>
+ </div>
+</section>
+
+<!-- 5. Amber terminal -->
+<section class="screen orange" id="s5">
+ <div class="center" style="align-items:flex-start">
+  <h2>SYS://BOOTLOADER_TERMINAL</h2>
+  <p>> DISPLAY THREAD STARTED</p>
+  <p>> CLOCK VALUE: 10:10:10:10</p>
+  <p>> READING STORAGE CLOUD</p>
+  <pre id="t5" class="flicker"></pre>
+  <div class="big">LOADING...</div>
+ </div>
+</section>
+
+<!-- 6. Split controller -->
+<section class="screen blue" id="s6">
+ <div class="center">
+  <div class="split">
+   <div class="panel">
+    <h2>LEFT CONTROLLER</h2>
+    <p>010101</p>
+    <p id="t6a"></p>
+   </div>
+   <div class="panel">
+    <h2>RIGHT CONTROLLER</h2>
+    <p>101010</p>
+    <p id="t6b"></p>
+   </div>
+  </div>
+  <h1>SYNC LOST</h1>
+ </div>
+ <div class="noise"></div>
+</section>
+
+<!-- 7. Credential simulation -->
+<section class="screen yellow" id="s7">
+ <div class="center">
+  <div class="big flicker">CREDENTIAL CHECK</div>
+  <div class="big shake" id="t7">CHECKING...</div>
+  <h2>SIMULATED CREDENTIAL PROTECTION</h2>
+  <div class="blocks" id="b7"></div>
+ </div>
+</section>
+
+<!-- 8. Purple language glitch -->
+<section class="screen purple" id="s8">
+ <div class="noise"></div>
+ <div class="center">
+  <h1 class="shake">SETTING LANGUAGE</h1>
+  <div class="big" id="t8"></div>
+  <p>THE TEXT SPELL SYS NT WRKIN</p>
+ </div>
+</section>
+
+<!-- 9. Black minimalist -->
+<section class="screen black" id="s9">
+ <div class="center">
+  <div class="big flicker" id="t9">DO NOT READ THIS LINE</div>
+  <p>THIS SCREEN HAS ONLY ONE JOB.</p>
+  <p class="shake">IT HAS STOP THE JOB.</p>
+  <p>IT HAS FORGETTON ITS JOB</p>
+ </div>
+</section>
+
+<!-- 10. Cyan grid -->
+<section class="screen cyan" id="s10">
+ <div class="center">
+  <h1>GRID REARRANGEMENT</h1>
+  <h2>DIFFERENT IDEA</h2>
+  <p>PREPARING GRID ARRANGEMENT...</p>
+  <div class="blocks" id="b10"></div>
+  <p id="t10" class="flicker"></p>
+ </div>
+</section>
+
+<!-- 11. Pink reboot -->
+<section class="screen pink" id="s11">
+ <div class="center">
+  <h1 class="shake">REBOOTING THE DEVICE</h1>
+  <div class="big" id="t11">STARTING STARTING STARTING</div>
+  <p>Beginning the beginning of the beginning...</p>
+  <div class="bar"><div class="fill" id="p11"></div></div>
+ </div>
+</section>
+
+<!-- 12. White geometric -->
+<section class="screen white" id="s12">
+ <div class="center">
+  <h1>GEOMETRY EXCEPTION</h1>
+  <div class="big flicker">
+   + × ◇ □ ○
+  </div>
+  <p id="t12"></p>
+ </div>
+</section>
+
+<!-- 13. Lime number storm -->
+<section class="screen lime" id="s13">
+ <div class="noise"></div>
+ <div class="center">
+  <h1>NUMBER SYSTEM</h1>
+  <h2>NUMBER STORM</h2>
+  <div class="big shake" id="t13"></div>
+  <p>SEQUENCE TRYING TO REPAIR ITSELF</p>
+  <div class="blocks" id="b13"></div>
+ </div>
+</section>
+
+<!-- 14. Grey system map -->
+<section class="screen gray" id="s14">
+ <div class="center">
+  <h1>VIRTUAL SYSTEM MAP</h1>
+  <div class="split">
+   <div class="panel">NODE A<br><p id="t14a"></p></div>
+   <div class="panel">NODE B<br><p id="t14b"></p></div>
+  </div>
+  <h2 class="flicker">CONNECTION LOST ∆ SEARCHING DEVICE'S CLOUD</h2>
+ </div>
+</section>
+
+<!-- 15. Magenta reversed text -->
+<section class="screen magenta" id="s15">
+ <div class="center">
+  <h1 class="shake">DIRECTION ERROR</h1>
+  <div class="big" id="t15" style="transform:scaleX(-1)">FORWARD</div>
+  <p>THE DISPLAY DOES NOT WORKING ON PATH</p>
+ </div>
+</section>
+
+<!-- 16. Navy scan -->
+<section class="screen navy" id="s16">
+ <div class="noise"></div>
+ <div class="center">
+  <h1>DEEP DISPLAY SCAN</h1>
+  <div class="bar" style="height:18px">
+   <div class="fill" id="p16" style="background:#8ba7ff"></div>
+  </div>
+  <p id="t16"></p>
+  <div class="big flicker">SCAN / RESCAN / RESCAN</div>
+ </div>
+</section>
+
+<!-- 17. Rainbow fractured layout -->
+<section class="screen rainbow" id="s17">
+ <div class="center">
+  <h1 class="shake">FRACTURED INTERFACE</h1>
+  <div class="split">
+   <div class="panel"><h2>PART A</h2><p id="t17a"></p></div>
+   <div class="panel"><h2>PART B</h2><p id="t17b"></p></div>
+  </div>
+  <div class="big flicker">THE WHOLE IS IN PIECES</div>
+ </div>
+</section>
+
+<!-- 18. Orange loop -->
+<section class="screen orange" id="s18">
+ <div class="center">
+  <h1>LOOP DETECTED</h1>
+  <div class="big shake" id="t18"></div>
+  <div class="blocks" id="b18"></div>
+  <p>Unknown authorisation</p>
+ </div>
+</section>
+
+<!-- 19. Final reboot -->
+<section class="screen black" id="s19">
+ <div class="center">
+  <h1 class="flicker">FINAL DISPLAY RESET</h1>
+  <div class="big" id="t19">RESETTING...</div>
+  <div class="bar"><div class="fill" id="p19"></div></div>
+  <p>Preparing the final screen...</p>
+ </div>
+</section>
+
+<!-- 20. Storage index -->
+<section class="screen red" id="s20">
+ <div class="noise"></div>
+ <div class="center">
+  <h1 class="flicker">STORAGE INDEX ERROR</h1>
+  <div class="big">INDEX / 00X / NULL</div>
+  <p>Storage reference mismatch detected.</p>
+  <div class="blocks" id="b20"></div>
+ </div>
+</section>
+
+<!-- 21. Data mismatch -->
+<section class="screen purple" id="s21">
+ <div class="center">
+  <h1>DATA VALIDATION</h1>
+  <div class="big shake">DATA MISMATCH</div>
+  <div class="split">
+   <div class="panel">
+    <h2>EXPECTED</h2>
+    <p>7A-20-FF-01</p>
+   </div>
+   <div class="panel">
+    <h2>RECEIVED</h2>
+    <p>00-NULL-7B-ERROR</p>
+   </div>
+  </div>
+  <p>Comparing simulated data records...</p>
+ </div>
+</section>
+
+<!-- 22. Memory checksum -->
+<section class="screen navy" id="s22">
+ <div class="noise"></div>
+ <div class="center">
+  <h1>MEMORY CHECKSUM</h1>
+  <div class="big flicker">CHECKSUM FAILED</div>
+  <p>REFERENCE: 0X7F20</p>
+  <p>RESULT: 0X00FF</p>
+  <div class="bar">
+   <div class="fill" style="width:72%;background:#8ba7ff"></div>
+  </div>
+  <p>Repeating simulated validation...</p>
+ </div>
+</section>
+
+<!-- 23. Device communication -->
+<section class="screen blue" id="s23">
+ <div class="center">
+  <h1>DEVICE COMMUNICATION</h1>
+  <div class="split">
+   <div class="panel">
+    <h2>PORT A</h2>
+    <p>CONNECTED</p>
+    <p>10101010</p>
+   </div>
+   <div class="panel">
+    <h2>PORT B</h2>
+    <p>NO RESPONSE</p>
+    <p>00000000</p>
+   </div>
+  </div>
+  <div class="big shake">LINK UNSTABLE</div>
+  <div class="blocks" id="b23"></div>
+ </div>
+</section>
+
+<!-- 24. Network controller -->
+<section class="screen cyan" id="s24">
+ <div class="center">
+  <h1>NETWORK CONTROLLER</h1>
+  <div class="big flicker">ROUTE NOT FOUND</div>
+  <p>NODE A → NODE B → NULL</p>
+  <p>Checking simulated connection path...</p>
+  <div class="blocks" id="b24"></div>
+ </div>
+</section>
+
+<!-- 25. Website request route -->
+<section class="screen magenta" id="s25">
+ <div class="center">
+  <h1>WEBSITE REQUEST ROUTE</h1>
+  <div class="big shake">REQUEST ERROR</div>
+  <p>HTTPS://REQUEST/ROUTE/FAILED</p>
+  <div class="panel">
+   <p>DNS: CHECKING</p>
+   <p>ROUTE: NOT FOUND</p>
+   <p>RESPONSE: PENDING</p>
+  </div>
+  <div class="blocks" id="b25"></div>
+ </div>
+</section>
+
+<!-- 26. Server response -->
+<section class="screen orange" id="s26">
+ <div class="center">
+  <h1>SERVER RESPONSE</h1>
+  <div class="big flicker">503 / RESPONSE ERROR</div>
+  <p>SERVER STATUS: UNAVAILABLE</p>
+  <p>RESPONSE CODE: 503</p>
+  <p>Waiting for simulated server response...</p>
+ </div>
+</section>
+
+<!-- 27. Application service -->
+<section class="screen gray" id="s27">
+ <div class="center">
+  <h1>APPLICATION SERVICE</h1>
+  <div class="split">
+   <div class="panel">
+    <h2>APP CORE</h2>
+    <p>READY</p>
+   </div>
+   <div class="panel">
+    <h2>DEPENDENCY</h2>
+    <p>NOT FOUND</p>
+   </div>
+  </div>
+  <div class="big shake">SERVICE ERROR</div>
+  <p>Checking simulated application components...</p>
+ </div>
+</section>
+
+<!-- 28. Service reinitialisation -->
+<section class="screen pink" id="s28">
+ <div class="center">
+  <h1 class="shake">SERVICE REINITIALISATION</h1>
+  <div class="big flicker">RESTARTING...</div>
+  <p>Resetting display service state...</p>
+  <div class="bar">
+   <div class="fill" style="width:85%"></div>
+  </div>
+ </div>
+</section>
+
+<!-- 29. Final validation -->
+<section class="screen black" id="s29">
+ <div class="center">
+  <h1 class="flicker">FINAL VALIDATION</h1>
+  <div class="big">CHECKING RESULTS</div>
+  <p>DISPLAY: READY</p>
+  <p>SIMULATION: COMPLETE</p>
+  <p>Preparing final status...</p>
+ </div>
+</section>
+
+<!-- 30. Original safe finish -->
+<section class="screen green" id="s30">
+ <div class="center">
+  <h1>DIAGNOSIS SYSTEM</h1>
+  <div class="big">YOUR DEVICE IS SAFE</div>
+  <p>Diagnised by Smart AdvanAnosis.</p>
+  <button onclick="location.reload()">OKAY</button>
+ </div>
+</section>
+
+<script>
+let current=0;
+let started=false;
+let mainTimer=null;
+let effects=[];
+let progress={p2:0,p3:0,p11:0,p16:0,p19:0};
+
+const words=[
+ "ZXQ-000-NOTFOUND",
+ "FOUNDING BOOTLOADER",
+ "FILES CORRUPTED",
+ "GRID IDEA FAILED",
+ "VOID/VOID/VOID",
+ "REPEAT BOOTING FAILED",
+ "SYSTEM SYSTEM SYSTEM",
+ "44 BAD REQUEST",
+ "UNKNOWN AUTHORISATION",
+ "DIAGNOSIS PROCESS FAILED",
+ "010101010101",
+ "ERROR 404 ERROR",
+ "SD READER BACKUP",
+ "YOUR DEVICE HAS LOCKED",
+ "THE CLOCK FAILED BIOS SECOND",
+ "RoHS NOT VALID",
+ "TLS CERTIFICATE VALID THROUGH",
+ "NULL NULL NULL",
+ "CREDENTIAL UNKNOWN",
+ "LOADING FAILED"
+];
+
+function strange(){
+ let result="";
+ for(let i=0;i<5;i++){
+  result+=words[Math.floor(Math.random()*words.length)]+" ";
+ }
+ return result;
+}
+
+function setText(id,value){
+ const el=document.getElementById(id);
+ if(el)el.textContent=value;
+}
+
+function updateText(){
+ for(let n=4;n<=19;n++){
+  ["t"+n,"t"+n+"a","t"+n+"b"].forEach(id=>{
+   const el=document.getElementById(id);
+   if(el)el.textContent=strange();
+  });
+ }
+ setText("t7",strange());
+ setText("t13",Array.from({length:12},()=>
+  Math.floor(Math.random()*999)).join(" / "));
+}
+
+function makeBlocks(id,count){
+ const el=document.getElementById(id);
+ if(!el)return;
+ for(let i=0;i<count;i++){
+  el.appendChild(document.createElement("i"));
+ }
+}
+
+/* Persistent glitch: stays until the next screen */
+function playScreenGlitch(screen,n){
+ const types=["glitch-a","glitch-b","glitch-c"];
+ const type=types[n%3];
+
+ screen.classList.add(type);
+}
+
+function stopEffects(){
+ if(mainTimer){
+  clearInterval(mainTimer);
+  mainTimer=null;
+ }
+ effects.forEach(clearInterval);
+ effects=[];
+}
+
+function startShow(){
+ if(started)return;
+ started=true;
+
+ /* Immediately move from screen 1 to screen 2 */
+ current=1;
+ showScreen(current);
+
+ effects.push(setInterval(()=>{
+  updateText();
+  document.querySelectorAll(".blocks i").forEach(b=>{
+   b.style.opacity=Math.random().toFixed(2);
+   b.style.transform="scaleY("+(0.3+Math.random()*1.8)+")";
+  });
+ },300));
+
+ effects.push(setInterval(()=>{
+  progress.p2=Math.min(100,progress.p2+12);
+  setText("updateText",progress.p2<100?
+   "Checking component "+progress.p2+"%":"Update complete");
+  document.getElementById("p2").style.width=progress.p2+"%";
+ },500));
+
+ effects.push(setInterval(()=>{
+  progress.p3=Math.min(100,progress.p3+15);
+  document.getElementById("p3").style.width=progress.p3+"%";
+ },500));
+
+ effects.push(setInterval(()=>{
+  progress.p11=(progress.p11+19)%101;
+  document.getElementById("p11").style.width=progress.p11+"%";
+  progress.p16=(progress.p16+23)%101;
+  document.getElementById("p16").style.width=progress.p16+"%";
+  progress.p19=Math.min(100,progress.p19+5);
+  document.getElementById("p19").style.width=progress.p19+"%";
+ },300));
+
+ /* Every next screen stays for 4 seconds */
+ mainTimer=setInterval(()=>{
+  if(current>=29){
+   stopEffects();
+   return;
+  }
+
+  current++;
+  showScreen(current);
+
+  /* Stop timers after screen 30 appears */
+  if(current===29){
+   stopEffects();
+  }
+ },4000);
+}
+
+function showScreen(n){
+ document.querySelectorAll(".screen").forEach(s=>{
+  s.classList.remove(
+   "active",
+   "fade-in",
+   "glitch-in",
+   "glitch-a",
+   "glitch-b",
+   "glitch-c",
+   "glitch-shake"
+  );
+ });
+
+ const next=document.getElementById("s"+(n+1));
+ if(!next)return;
+
+ next.classList.add("active");
+
+ /* Apply a different persistent glitch to each screen */
+ playScreenGlitch(next,n);
+
+ /* Immediate hard cut: no transition effect */
+ document.getElementById("status").textContent=
+  "SCREEN "+(n+1)+" / 30";
+
+ updateText();
+}
+
+makeBlocks("b4",60);
+makeBlocks("b7",50);
+makeBlocks("b10",80);
+makeBlocks("b13",60);
+makeBlocks("b18",70);
+
+makeBlocks("b20",60);
+makeBlocks("b23",60);
+makeBlocks("b24",60);
+makeBlocks("b25",60);
+</script>
+
+</body>
+</html>
